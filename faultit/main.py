@@ -7,7 +7,12 @@ import click
 import pygit2
 
 from .apply import Offsets, apply_change_on_lines
-from .change import Change, group_changes_by_commit, split_patch_to_changes
+from .change import (
+    Change,
+    get_change_offset,
+    group_changes_by_commit,
+    split_patch_to_changes,
+)
 
 
 def filter_patches(
@@ -85,7 +90,7 @@ def commit_changes(
                 filename_to_offsets[change.filename],
             )
 
-            change_offset = (change.old_start, change.new_start)
+            change_offset = get_change_offset(change)
             filename_to_offsets[change.filename][change_offset] += len(
                 change.new_lines
             ) - len(change.old_lines)
