@@ -1,6 +1,7 @@
 import dataclasses
 from collections import defaultdict
 from itertools import chain
+from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 
 import pygit2
@@ -41,19 +42,6 @@ def _split_hunk_to_changes(
 
     old_start = hunk.old_start - 1
     new_start = hunk.new_start - 1
-
-    # if not new_lines:
-    #     return (
-    #         Change(
-    #             filename=filename,
-    #             commit=blame_map[old_start + index - 1],
-    #             old_start=old_start + index,
-    #             old_lines=[old_line],
-    #             new_start=new_start,
-    #             new_lines=[],
-    #             mode=mode
-    #         ) for index, old_line in enumerate(old_lines)
-    #     )
 
     line_match, external_line_match = match_lines(
         old_lines, new_lines, removed_lines_map
@@ -107,10 +95,12 @@ def map_removed_lines(patch: pygit2.Patch) -> Dict[int, bytes]:
     return map
 
 
-def split_patch_to_changes(patch: pygit2.Patch) -> Iterable[Change]:
+def split_patch_to_changes(
+    patch: pygit2.Patch, repo: pygit2.Repository
+) -> Iterable[Change]:
     filename = patch.delta.old_file.path
     mode = patch.delta.old_file.mode
-    blame_map = get_blame_per_line(filename)
+    blame_map = get_blame_per_line(filename, Path(repo.path).parent)
     removed_lines_map = map_removed_lines(patch)
 
     return chain(

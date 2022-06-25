@@ -1,6 +1,8 @@
 from collections import defaultdict
 from io import BytesIO
 from itertools import chain
+from pathlib import Path
+from textwrap import dedent
 from typing import Dict, Generator, Iterable, List
 
 import click
@@ -48,9 +50,11 @@ def create_commit_from_commit(
     head = repo.head.peel()
 
     commit = repo.get(commit_id)
-    commit_message = f"""
+    commit_message = dedent(
+        f"""
     {commit.message}\n\nAutomatic commit by faultit, original commit:\n{commit.hex}
     """
+    ).strip()
     repo.create_commit(
         "HEAD", commit.author, signature, commit_message, tree, [head.id]
     )
@@ -109,18 +113,22 @@ def commit_changes(
         create_commit_from_commit(index_entries, commit_id, signature, repo)
 
 
-@click.command()
-def main() -> None:
-    repo = pygit2.Repository(".")
+def run_faultit(dir: Path) -> None:
+    repo = pygit2.Repository(dir)
     diff: pygit2.Diff = repo.diff(
         context_lines=0, flags=pygit2.GIT_DIFF_IGNORE_SUBMODULES
     )
     patches = filter_patches(diff)
     grouped = group_changes_by_commit(
-        chain(*[split_patch_to_changes(patch) for patch in patches])
+        chain(*[split_patch_to_changes(patch, repo) for patch in patches])
     )
 
     commit_changes(grouped, repo, pygit2.Signature("faultit", "faultit@faultit.com"))
+
+
+@click.command()
+def main() -> None:
+    run_faultit(Path("."))
 
 
 if __name__ == "__main__":
